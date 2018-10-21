@@ -17,7 +17,7 @@
  */
 abstract sig Content {
 	// Content must be uploaded by only one user
-	uploadedBy: one User,
+	uploadedBy: lone User,  // SHould be lone instead of one
 	// User can only tag one another
 	tags: User -> one User,
 	// The privacy level of this Content
@@ -117,6 +117,47 @@ pred invariant {
 	all c : Content, u1, u2 : User | 
 		((u1->u2) in c.tags) implies (u1 in u2.friends)
 }
+
+/*
+  * Part by Wei-Hsuan :
+  * 1. upload
+  * 2. remove
+  */
+
+// User u uploads content
+// c is before upload, c' is after upload
+pred upload[u : User, c, c' : Content] {
+	// c is not uploaded at the first place
+	no c.uploadedBy
+	// c' is uploaded after
+	c'.uploadedBy = u
+	// No tags initially
+	no c.tags
+	no c'.tags
+	// Default privacy level is OnlyMe
+	c'.privacy = OnlyMe
+	// Not on wall initially
+	c not in Wall.publication
+	c' not in Wall.publication
+	// No comment attached to c initially
+	c not in Comment.attachedTo
+	c' not in Comment.attachedTo
+}
+
+// User u removes content c
+pred remove[u : User, c, c' : Content] {
+	// c is uploaded by u
+	c.uploadedBy = u
+	// c' is removed
+	no c'.uploadedBy
+	// No tags after removal
+	no c'.tags
+	// Not on wall after removal
+	c' not in Wall.publication
+	// No comment attached to c'
+	c' not in Comment.attachedTo
+}
+
 
 run {
 	invariant
