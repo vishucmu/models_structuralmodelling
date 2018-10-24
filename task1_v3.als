@@ -166,7 +166,8 @@ pred upload[n, n' : Nicebook, u : User, c : Content, p : PrivacyLevel]
 	n'.users = n.users
 	n'.walls = n.walls
 	// c is in n’
-	n'.contents = n.contents + c
+	c in Note implies n'.contents = n.contents + c + c.contain 
+	(c in Comment or c in Note) implies n'.contents = n.contents + c
 	// No comment attached to c initially
 	all com : n.contents | com in Comment implies c not in com.attachedTo
 }
@@ -181,15 +182,16 @@ pred remove[n, n' : Nicebook, u : User, c : Content]
 	c.uploadedBy = u
 	// c is in n
 	c in n.contents
+	c not in Comment
 	// Postcondition
 	// Frame conditions
 	n'.users = n.users
 	n'.walls = n.walls
 	// Remove c from contents
 	n'.contents = n.contents - c
-	
+	all u' : User | c in u'.(n.walls) implies n'.walls = n.walls - (u' -> c)
+	all c' : Comment | c' in (attachedTo.c) implies n'.contens = n.contents
 }
-// Part by Weihsuan ends
 
 
 // part by yuanzong
@@ -201,7 +203,7 @@ pred publish[n, n' : Nicebook, c :Content, u : User, p :PrivacyLevel] {
 		implies n'.walls = n.walls + (u -> c) 
 	// if a content is owned  by the user's friend, and its a note or photo
 	// and it is not already on the friend's wall, publish it to the wall
-	(c in (uploadedBy.(u.friends))) and (c not in Comment)
+	(c in (uploadedBy.(u.friends))) and (c not in Comment) and (contentCanView[n, u, u.friends, c])
 		implies n'.walls = n.walls + (u -> c)
 	// if a content has not been uploaded yet, publish it and add it to the user’s account
 	(c not in Comment) and (c not in (uploadedBy.u)) and (c not in (uploadedBy.(u.friends)))
@@ -216,8 +218,8 @@ pred publish[n, n' : Nicebook, c :Content, u : User, p :PrivacyLevel] {
 
 pred unpublish[n, n' : Nicebook, c : Content, u : User] {
 	// if c is in the user u's wall and , unpublish it
-	(c in u.(n.walls) and wallCanView[n, u, w] and contentCanView[u, c]) 
-		implies n'.walls = n.walls + (u -> c)
+	(c in u.(n.walls) and (c not in Comment) [n, u, w]) 
+		implies n'.walls = n.walls - (u -> c)
 	// users set won't change
 	n'.users = n.users
 	// contents in the Nicebook won't change
