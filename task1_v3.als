@@ -243,8 +243,9 @@ pred publish[n, n' : Nicebook, c :Content, u : User, p :PrivacyLevel] {
 
 pred unpublish[n, n' : Nicebook, c : Content, u : User] {
 	// if c is in the user u's wall and , unpublish it
-	(c in u.(n.walls) and (c not in Comment)) 
-		implies n'.walls = n.walls - (u -> c)
+	c in u.(n.walls)
+	c not in Comment
+	n'.walls = n.walls - (u -> c)
 	// users set won't change
 	n'.users = n.users
 	// contents in the Nicebook won't change
