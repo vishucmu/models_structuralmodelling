@@ -44,7 +44,7 @@ pred nicebookInvariant[n : Nicebook] {
 	// No user can have wall without being Nicebook's user
 	no u : User | u not in n.users and (some c : Content | c = n.walls[u])
 	// Every content in the wall should exist in the Nicebook
-	all u : User | all c : n.walls[u] | c in n.contents and c not in Comment
+	all u : User | all c : n.walls[u] | c in n.contents and c not in Comment and c.uploadedBy in u + u.friends
 	// All contents of the Nicebook should follow the invariants of contents
 	all c : n.contents | contentInvariant[c]
 	// All users using the wall should follow the invariants of users
@@ -341,3 +341,4 @@ assert AddCommentCheck {
 }
 
 check AddCommentCheck for 10
+
