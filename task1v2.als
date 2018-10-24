@@ -4,7 +4,7 @@
 
 sig Nicebook {
 	users : set User,
-	walls : User -> one Wall,
+	walls : User -> Content,
 	contents : set Content
 }
 
@@ -14,7 +14,7 @@ sig User {
 	privacyComment: one PrivacyLevel
 }
 
-sig Content {
+abstract sig Content {
 	uploadedBy : one User,
 	tags : User -> one User,
 	removeTags : User -> one User,
@@ -41,15 +41,9 @@ one sig FriendsOfFriends extends PrivacyLevel {}
 // User
 one sig Everyone extends PrivacyLevel {}
 
-sig Wall {
-	publication : set Content
-}
-
 pred nicebookInvariant[n : Nicebook] {
-	// Every user has a different wall
-	all u, u' : User | u != u' implies n.walls[u] != n.walls[u']
 	// Every content in the wall should exist in the Nicebook
-	all u : User | all c : n.walls[u].publication | c in n.contents
+	all u : User | all c : n.walls[u] | c in n.contents and c not in Comment
 }
 
 pred userInvariant[u : User] {
@@ -64,22 +58,6 @@ pred contentInvariant[c : Content] {
 	c in Comment implies (no c.tags and c not in c.^attachedTo)
 	// A user can only tag his/her friends
 	all u : User | all u' : c.tags[u] | u in u'.friends
-	// A content can only be a comment, a photo or a note
-	(c in Comment and c not in Photo and c not in Note) or
-	(c not in Comment and c in Photo and c not in Note) or
-	(c not in Comment and c not in Photo and c in Note)
-}
-
-pred wallInvariant[w : Wall] {
-	// No comments can directly appear on the wall
-	all c : w.publication | not c in Comment
-}
-
-pred privacyInvariant[p : PrivacyLevel] {
-	p = OnlyMe or
-	p = Friends or
-	p = FriendsOfFriends or
-	p = Everyone
 }
 
 // Part of Tianli
@@ -96,9 +74,8 @@ pred privacyCanView[u, u' : User, p : PrivacyLevel] {
 }
 
 // In Nicebook n, whether user u can view wall w
-pred wallCanView[n : Nicebook, u : User, w : Wall] {
-	some u' : n.users | 
-		w = n.walls[u'] and privacyCanView[u, u', u'.privacyView]
+pred wallCanView[n : Nicebook, u, u' : User] {
+	privacyCanView[u, u', u'.privacyView]
 }
 
 // Whether user u can view content c
@@ -221,7 +198,7 @@ pred remove[n, n' : Nicebook, u : User, c : Content]
 
 
 // part by yuanzong
-pred publish[n, n' : Nicebook, c :Content, u : User, p :PrivacyLevel] {
+pred publish[n, n' : Nicebook, c :Content, u : User, p : PrivacyLevel] {
 	// if a content is owned  by the user u, and its a note or photo
 	// and it is not already on the user's wall, publish it to the wall
 	all w, w' : u.(n.walls) | (c in (uploadedBy.u)) and (c not in Comment)
@@ -242,8 +219,6 @@ pred publish[n, n' : Nicebook, c :Content, u : User, p :PrivacyLevel] {
 	no c.tags
 	// user's privacy level set to p
 	u.privacyView = p
-	// No comment attached to c initially
-	all com : n.contents | com in Comment implies c not in com.attachedTo
 }
 
 pred unpublish[n, n' : Nicebook, c : Content, u : User] {
@@ -252,8 +227,7 @@ pred unpublish[n, n' : Nicebook, c : Content, u : User] {
 		implies w'.publication = w.publication - c
 		and n'.walls = n.walls - (u -> w) + (u -> w')
 	n'.users = n.users
-	n'.contents = n.contents
-	all com : n.contents | com in Comment implies c not in com.attachedTo	
+	n'.contents = n.contents	
 }
 
 //Part by Vishwas
