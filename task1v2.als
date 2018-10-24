@@ -137,16 +137,7 @@ pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment] {
 // viewable
 fun viewable[n : Nicebook, u : User] : set Content {
 	// If content c is uploaded by user u, u can view c
-	{c : n.contents | c.uploadedBy = u or (
-		// If on a wall that user u can view...
-		some u' : n.users | 
-			// If c is published on the wall, u can view c under privacy setting
-			(c in n.walls[u'] and contentCanView[n, u, u', c]) or 
-			// If c is a photo that contained by some notes on the wall, u can view c under privacy setting
-			(some c' : Note | c in c'.contain and c' in n.walls[u'] and contentCanView[n, u, u', c']) or
-			// If c is a comment and u can view c under privacy setting
-			(c in Comment and (some c' : n.walls[u'] | c' in c.^attachedTo and contentCanView[n, u, u', c']))
-	)}	
+	{c : n.contents | contentCanView[n, u, c]}	
 }
 
 /*

@@ -1,60 +1,34 @@
 /*
- * 	17-651 | Group Project | Team 9
+ * 17-651 | Group Project | Team 9
  */
 
-// the signature of our social network 
 sig Nicebook {
-	// set of users in the social network
 	users : set User,
-	// the unique walls for each user
-	walls : User -> set Content,
-	// set of contents in the social network
+	walls : users -> Content,
 	contents : set Content
 }
 
 sig User {
-	// set of friends for a user
 	friends : set User,
-	// user's privacy setting of who can view his/her content
 	privacyView: one PrivacyLevel,
-	// user's privacy setting of who can add comment to his/her content
 	privacyComment: one PrivacyLevel
 }
 
 abstract sig Content {
-	// the user that upload this content
 	uploadedBy : one User,
-	// the User to User relationship of this content
-	// the left User is the one who tagged this content
-	// the right User is the one who got tagged by another user
 	tags : User -> one User,
-	removeTags : User -> one User,
-	// the privacy level of this content
-	privacy : lone PrivacyLevel
+	privacy : one PrivacyLevel
 }
-
-/*
- *  	a content must be one of the following three types:
-* 	a photo, a note, or a comment
- */
 
 sig Photo extends Content {}
 
 sig Note extends Content {
-	// a note may contain one or more photos
 	contain : set Photo
 }
 
 sig Comment extends Content {
-	// a comment can attach to any types of content
 	attachedTo: lone Content
 }
-
-/*
- * 	Every content must have a privacy level, and the privacy
-*	level must be one of the following four types:
-*	only me, friends, friends of friends, and everyone
- */
 
 abstract sig PrivacyLevel {}
 // u : User
@@ -79,8 +53,12 @@ pred userInvariant[u : User] {
 }
 
 pred contentInvariant[c : Content] {
-	// Tags should only exist in notes and photos
-	c in Comment implies (no c.tags and c not in c.^attachedTo)
+	// Comments have no tags, no privacy level and can not be attached to itself recursively
+	c in Comment implies (no c.tags and no c.privacy and c not in c.^attachedTo)
+	// Photos and notes have privacy level
+	one p : PrivacyLevel | p = c.privacy
+	// Notes' privacy level should be same as all its photos (assumption)
+	c in Note implies (all c' : c.contain | c.privacy = c'.privacy)
 	// A user can only tag his/her friends
 	all u : User | all u' : c.tags[u] | u in u'.friends
 }
@@ -98,27 +76,30 @@ pred privacyCanView[u, u' : User, p : PrivacyLevel] {
 	(p = OnlyMe and u = u')
 }
 
-// In Nicebook n, whether user u can view wall w
-pred wallCanView[n : Nicebook, u, u' : User] {
-	privacyCanView[u, u', u'.privacyView]
+// Whether user u can view content c directly on the wall of u'
+pred contentOnWallCanView[n : Nicebook, u, u' : User, c : Content] {
+	// Content c should be on the wall of u'
+	c in n.walls[u']
+	// If u = u', all contentc can be viewed on his/her wall
+	u = u' or (
+		// If content is uploaded by u', then follow the privacy level of content
+		(u' = c.uploadedBy implies privacyCanView[u, u', c.privacy]) and
+		// If content is not uploaded by u', then follow the view privacy level of u'
+		(u' != c.uploadedBy implies privacyCanView[u, u', u'.privacyView])
+	)
 }
 
 // Whether user u can view content c
-pred contentCanView[u : User, c : Content] {
-	privacyCanView[u, c.uploadedBy, c.privacy]
-}
-
-// Whether user u can view comment c
-pred commentCanView[u : User, c : Comment] {
-	// u can view c
-	contentCanView[u, c]
-	// u can view the content c attached to recursively
-	all c' : c.^attachedTo | contentCanView[u, c']
+pred contentCanView[n : Nicebook, u : User, c : Content] {
+	u = c.uploadedBy or
+	(some u' : n.users | contentOnWallCanView[n, u, u', c] or
+		(c in Photo and (some c' : Note | c in c'.contain and contentOnWallCanView[n, u, u', c']))) or
+	(c in Comment and (some c' : c.content - Comment | c' in c.^attachedTo and contentCanView[n, u, c']))
 }
 
 // Part by Tianli
 // addComment
-pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment, p : PrivacyLevel] {
+pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment] {
 	// Precondition
 	// u is a user of Nicebook n
 	u in n.users
@@ -126,6 +107,8 @@ pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment, p :
 	c in n.contents
 	// Comment com is not attached to any content
 	no com.attachedTo
+	// Content has been shown onto some user's wall
+	some u' : n.users | (c in n.walls[u'] can )
 	// In Nicebook n, user u can view content c
 	c in viewable[n, u]
 	// Comment com is uploaded by user u
@@ -154,20 +137,7 @@ pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment, p :
 // viewable
 fun viewable[n : Nicebook, u : User] : set Content {
 	// If content c is uploaded by user u, u can view c
-	{c : n.contents | c.uploadedBy = u or (
-		// If on a wall that user u can view...
-		some u' : n.users | let w = n.walls[u'] | wallCanView[n, u, w] and (
-			// If c is published on the wall, u can view c under privacy setting
-			(c in w.publication and contentCanView[u, c]) or 
-			// If c is a comment and u can view c under privacy setting
-			(c in Comment and commentCanView[u, c] and (
-				// If exists a content c' that is published on the wall
-				// and c' is attached to by c recursively, u can view c
-				some c' : n.contents | 
-					c' in c.^attachedTo and c' in w.publication
-			))
-		)
-	)}	
+	{c : n.contents | contentCanView[n, u, c]}	
 }
 
 /*
