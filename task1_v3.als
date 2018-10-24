@@ -45,8 +45,10 @@ pred nicebookInvariant[n : Nicebook] {
 	no u : User | u not in n.users and (some c : Content | c = n.walls[u])
 	// Every content in the wall should exist in the Nicebook
 	all u : User | all c : n.walls[u] | c in n.contents and c not in Comment
-	// All contents in the wall should follow the invariants of contents
+	// All contents of the Nicebook should follow the invariants of contents
 	all c : n.contents | contentInvariant[c]
+	// All users using the wall should follow the invariants of users
+	all u : User | userInvariant[u]
 }
 
 pred userInvariant[u : User] {
@@ -57,14 +59,26 @@ pred userInvariant[u : User] {
 }
 
 pred contentInvariant[c : Content] {
-	// Comments have no tags, no privacy level and can not be attached to itself recursively
-	c in Comment implies (no c.tags and no c.privacy and c not in c.^attachedTo)
+	// Comments should follow the invariants
+	c in Comment implies commentInvariant[c]
 	// Photos and notes have privacy level
 	one p : PrivacyLevel | p = c.privacy
-	// Notes' privacy level should be same as all its photos (assumption)
-	c in Note implies (all c' : c.contain | c.privacy = c'.privacy)
+	// Notes should follow the invariants
+	c in Note implies noteInvariant[c]
 	// A user can only tag his/her friends
 	all u : User | all u' : c.tags[u] | u in u'.friends and u != u'
+}
+
+// Comments have no tags, no privacy level and can not be attached to itself recursively
+pred commentInvariant[c : Comment] {
+	no c.tags 
+	no c.privacy 
+	c not in c.^attachedTo
+}
+
+// Notes' privacy level should be same as all its photos (assumption)
+pred noteInvariant[c : Note] {
+	all c' : c.contain | c.privacy = c'.privacy
 }
 
 // Part of Tianli
@@ -93,12 +107,19 @@ pred contentOnWallCanView[n : Nicebook, u, u' : User, c : Content] {
 	)
 }
 
+// find a set of contents on wall that the current belongs to
+fun onWallContent[n : Nicebook, c : Content] : set Content {
+	{c' : n.contents | some u : n.users | c' in n.walls[u] and (
+		c' = c or
+		(c in Comment and c' in c.^attachedTo) or
+		(c in Photo and c' in Note and c in c'.contain)
+	)}
+}
+
 // Whether user u can view content c
 pred contentCanView[n : Nicebook, u : User, c : Content] {
 	u = c.uploadedBy or
-	(some u' : n.users | contentOnWallCanView[n, u, u', c] or
-		(c in Photo and (some c' : Note | c in c'.contain and contentOnWallCanView[n, u, u', c']))) or
-	(c in Comment and (some c' : n.contents - Comment | c' in c.^attachedTo and contentCanView[n, u, c']))
+	some c' : n.contents | c' in onWallContent[n, c]
 }
 /*
 // Part by Tianli
