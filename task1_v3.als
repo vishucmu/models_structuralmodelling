@@ -285,15 +285,22 @@ assert PublishCheck {
 }
 
 assert UnpublishCheck {
-	all n, n' : Nicebook, c : Content, u : User, p : PrivacyLevel | 
+	all n, n' : Nicebook, c : Content, u : User | 
 		(userInvariant[u] and contentInvariant[c] and nicebookInvariant[n] 
-			and unpublish[n,n',c,u,p]) implies (nicebookInvariant[n'])
+			and unpublish[n,n',c,u]) implies (nicebookInvariant[n'])
 }
 
-assert UnpublishCheck {
-	all n, n' : Nicebook, c : Content, u : User, p : PrivacyLevel | 
-		(userInvariant[u] and contentInvariant[c] and nicebookInvariant[n] 
-			and unpublish[n,n',c,u,p]) implies (nicebookInvariant[n'])
+assert AddTagCheck {
+	all n, n' : Nicebook, c : Content, u1, u2 : User | 
+		(userInvariant[u1] and userInvariant[u2] and contentInvariant[c] 
+			and nicebookInvariant[n] and addTag[n,n',c,u1,u2]) implies (nicebookInvariant[n'])
+}
+
+assert RemoveTagCheck {
+	all n, n' : Nicebook, c : Content, u1, u2, u : User | 
+		(userInvariant[u] and userInvariant[u1] and userInvariant[u2] and
+			contentInvariant[c] and nicebookInvariant[n]
+			and removeTag[n,n',c,u1,u2,u]) implies (nicebookInvariant[n'])
 }
 
 check PublishCheck for 3
