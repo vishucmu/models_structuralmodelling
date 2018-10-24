@@ -17,7 +17,6 @@ sig User {
 abstract sig Content {
 	uploadedBy : one User,
 	tags : User -> one User,
-	removeTags : User -> one User,
 	privacy : one PrivacyLevel
 }
 
@@ -232,24 +231,42 @@ pred unpublish[n, n' : Nicebook, c : Content, u : User] {
 
 //Part by Vishwas
 
-pred addTag[n,n’ : Nicebook, c : Content, u1, u2 : User] {
-//a user can tag another user on a photo, note - however the user can not be tagged on a //comment, also the content get published to a user who is tagged on the note or photo
-        all w,w’ : u2.(n.walls) and (c not in Comment)    
-        (u1->u2) in c.tags and w’.publication =  w.publication + c and n’.walls = n.walls + u2->w’
+pred addTag[n,n': Nicebook, c: Content, u1, u2 : User] {
+	// c is not a comment
+	c not in Comment
+	// u1, u2 are friends
+	u2 in u1.friends
+	// u1, u2 are users of Nicebook
+	u1 in n.users and u2 in n.users
+	// c is content of n
+	c in n.contents
 
-//the privacy level should not change even in case a new user is tagged on the note or photo
-	c’.privacy = c.privacy
+	// u1 has the permission to view the content
+	some u : n.users | contentCanView[n, u1, u, c] or 
+		(some c' : Note | c in c'.contain and contentCanView[n, u1, u, c'])
 
-//there are no changes to frame conditions of nicebook
-	n’.users = n.users
-  	n'.walls = n.walls
-  	n’.content = n.content
+	n'.users = n.users
+	// add the tag to the c'
+	one c' : Content | (c'.tags = c.tags + (u1->u2)) and 
+		(c'.privacy = c.privacy) and (c'.uploadedBy = c.uploadedBy) and
+			(n'.contents = n.contents - c + c') and
+				(all x : n.users | (c not in n.walls[x] implies n'.walls[x] = n.walls[x]) 
+					and (c in n.walls[x] implies n'.walls[x] = n.walls[x] - c + c'))
+
+	publish[n,n',c',u2,c'.privacy]
+
 }
 
 pred removeTag[n,n’ : Nicebook, c: Content. u1,u2 : User]{
 //a user can remove herself or the content publisher can remove tag from the published content 
 //u1 is the publisher of content, u2 is the user that was tagged
-	all w,w’ : u2.(n.walls) and (c not in Comment) and c.uploadedBy = u1
+
+	// c is not a comment
+	c not in Comment
+	// u1, u2 are friends
+
+
+	all w,w’ : u2.(n.walls) | c.uploadedBy = u1
   	((u1->u2) in c.removeTags | (u2->u2) in c.removeTags) 
  	 and w’.publication = w.publication - c 
  	 and n’.walls = n.walls + u2 -> w’  //a user can be removed by the publisher of content or the user himself
