@@ -232,26 +232,28 @@ pred unpublish[n, n' : Nicebook, c : Content, u : User] {
 
 //Part by Vishwas
 
-pred addTag[n,n' : Nicebook, c, c' : Content, u1, u2 : User] {
-	//a user can tag another user on a photo, note - however the user can not be tagged on a //comment, also the content get published to a user who is tagged on the note or photo
-	all w,w' : u2.(n.walls) | (c not in Comment)
-	            implies 
-	            (u1->u2) in c.tags and w'.publication =  w.publication + c and n'.walls = n.walls + u2->w'
+pred addTag[n,n’ : Nicebook, c : Content, u1, u2 : User] {
+//a user can tag another user on a photo, note - however the user can not be tagged on a //comment, also the content get published to a user who is tagged on the note or photo
+        all w,w’ : u2.(n.walls) and (c not in Comment)    
+        (u1->u2) in c.tags and w’.publication =  w.publication + c and n’.walls = n.walls + u2->w’
 
-	//the privacy level should not change even in case a new user is tagged on the note or photo
-	c'.privacy = c.privacy
-	//there are no changes to formal structure of nicebook
-	n'.users = n.users
-	n'.walls = n.walls
-	n'.contents = n.contents
+//the privacy level should not change even in case a new user is tagged on the note or photo
+	c’.privacy = c.privacy
+
+//there are no changes to frame conditions of nicebook
+	n’.users = n.users
+  	n'.walls = n.walls
+  	n’.content = n.content
 }
 
-pred removeTag[n,n' : Nicebook, c: Content, u1,u2 : User]{
-//a user can remove herself or the content publisher can remove tag from the published content //u1 is the publisher of content, u2 is the user that was tagged
-	all w,w' : u2.(n.walls) | (c not in Comment) and c.uploadedBy = u1
-		implies 
-		((u1->u2) in c.removeTags and (u2->u2) in c.removeTags) and w'.publication = w.publication - c 
-		and n'.walls = n.walls + u2 -> w' //a user can be removed by the publisher of content or the user himself
+pred removeTag[n,n’ : Nicebook, c: Content. u1,u2 : User]{
+//a user can remove herself or the content publisher can remove tag from the published content 
+//u1 is the publisher of content, u2 is the user that was tagged
+	all w,w’ : u2.(n.walls) and (c not in Comment) and c.uploadedBy = u1
+  	((u1->u2) in c.removeTags | (u2->u2) in c.removeTags) 
+ 	 and w’.publication = w.publication - c 
+ 	 and n’.walls = n.walls + u2 -> w’  //a user can be removed by the publisher of content or the user himself
 }
+
 
 
