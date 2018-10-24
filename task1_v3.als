@@ -119,9 +119,9 @@ fun onWallContent[n : Nicebook, c : Content] : set Content {
 // Whether user u can view content c
 pred contentCanView[n : Nicebook, u : User, c : Content] {
 	u = c.uploadedBy or
-	some c' : n.contents | c' in onWallContent[n, c]
+	some c' : n.contents | some u' : n.walls.c' | c' in onWallContent[n, c] and contentOnWallCanView[n, u, u', c']
 }
-/*
+
 // Part by Tianli
 // addComment
 pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment] {
@@ -130,6 +130,8 @@ pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment] {
 	u in n.users
 	// c is a content of Nicebook n
 	c in n.contents
+	// c can be viewd on someone's wall
+	
 	// Comment com is not attached to any content
 	no com.attachedTo
 	// Content has been shown onto some user's wall
@@ -155,7 +157,7 @@ pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment] {
 	com'.attachedTo = c
 	com'.privacy = p
 }
-*/
+
 // Part by Tianli
 // viewable
 fun viewable[n : Nicebook, u : User] : set Content {
