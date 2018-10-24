@@ -94,9 +94,9 @@ pred contentCanView[n : Nicebook, u : User, c : Content] {
 	u = c.uploadedBy or
 	(some u' : n.users | contentOnWallCanView[n, u, u', c] or
 		(c in Photo and (some c' : Note | c in c'.contain and contentOnWallCanView[n, u, u', c']))) or
-	(c in Comment and (some c' : c.content - Comment | c' in c.^attachedTo and contentCanView[n, u, c']))
+	(c in Comment and (some c' : n.contents - Comment | c' in c.^attachedTo and contentCanView[n, u, c']))
 }
-
+/*
 // Part by Tianli
 // addComment
 pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment] {
@@ -132,7 +132,7 @@ pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment] {
 	com'.attachedTo = c
 	com'.privacy = p
 }
-
+*/
 // Part by Tianli
 // viewable
 fun viewable[n : Nicebook, u : User] : set Content {
@@ -190,7 +190,7 @@ pred remove[n, n' : Nicebook, u : User, c : Content]
 	// Remove c from contents
 	n'.contents = n.contents - c
 	all u' : User | c in u'.(n.walls) implies n'.walls = n.walls - (u' -> c)
-	all c' : Comment | c' in (attachedTo.c) implies n'.contens = n.contents
+	all c' : Comment | c' in (attachedTo.c) implies n'.contents = n.contents
 }
 
 
@@ -203,7 +203,7 @@ pred publish[n, n' : Nicebook, c :Content, u : User, p :PrivacyLevel] {
 		implies n'.walls = n.walls + (u -> c) 
 	// if a content is owned  by the user's friend, and its a note or photo
 	// and it is not already on the friend's wall, publish it to the wall
-	(c in (uploadedBy.(u.friends))) and (c not in Comment) and (contentCanView[n, u, u.friends, c])
+	(c in (uploadedBy.(u.friends))) and (c not in Comment) and (contentOnWallCanView[n, u, u.friends, c])
 		implies n'.walls = n.walls + (u -> c)
 	// if a content has not been uploaded yet, publish it and add it to the user’s account
 	(c not in Comment) and (c not in (uploadedBy.u)) and (c not in (uploadedBy.(u.friends)))
@@ -218,7 +218,7 @@ pred publish[n, n' : Nicebook, c :Content, u : User, p :PrivacyLevel] {
 
 pred unpublish[n, n' : Nicebook, c : Content, u : User] {
 	// if c is in the user u's wall and , unpublish it
-	(c in u.(n.walls) and (c not in Comment) [n, u, w]) 
+	(c in u.(n.walls) and (c not in Comment)) 
 		implies n'.walls = n.walls - (u -> c)
 	// users set won't change
 	n'.users = n.users
@@ -239,8 +239,8 @@ pred addTag[n, n' : Nicebook, c : Content, u1, u2 : User] {
 	c in n.contents
 
 	// u1 has the permission to view the content
-	some u : n.users | contentCanView[n,u1,u,c] or 
-		(some c' : Note | c in c'.contain and contentCanView[n,u1,u,c'])
+	some u : n.users | contentOnWallCanView[n,u1,u,c] or 
+		(some c' : Note | c in c'.contain and contentOnWallCanView[n,u1,u,c'])
 
 	n'.users = n.users
 	// add the tag to the c'
@@ -276,3 +276,10 @@ pred removeTag[n, n' : Nicebook, c : Content, u1, u2, remover: User]{
 						and unpublish[n,n',c',u2]
 }
 
+assert PublishCheck {
+	all n, n' : Nicebook, c : Content, u : User, p : PrivacyLevel | 
+		(userInvariant[u] and contentInvariant[c] and nicebookInvariant[n] 
+			and publish[n,n',c,u,p]) implies (nicebookInvariant[n'])
+}
+
+check PublishCheck for 3
