@@ -252,9 +252,7 @@ pred addTag[n,n': Nicebook, c: Content, u1, u2 : User] {
 			(n'.contents = n.contents - c + c') and
 				(all x : n.users | (c not in n.walls[x] implies n'.walls[x] = n.walls[x]) 
 					and (c in n.walls[x] implies n'.walls[x] = n.walls[x] - c + c'))
-
-	publish[n,n',c',u2,c'.privacy]
-
+						and publish[n,n',c',u2,c.privacy]
 }
 
 pred removeTag[n,n’ : Nicebook, c: Content. u1,u2 : User]{
