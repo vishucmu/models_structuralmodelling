@@ -340,5 +340,11 @@ assert AddCommentCheck {
 					implies (nicebookInvariant[n'])
 }
 
+check UploadCheck for 10
+check RemoveCheck for 10
+check PublishCheck for 10
+check UnpublishCheck for 10
+check AddTagCheck for 10
+check RemoveTagCheck for 10
 check AddCommentCheck for 10
 
