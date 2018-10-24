@@ -282,4 +282,16 @@ assert PublishCheck {
 			and publish[n,n',c,u,p]) implies (nicebookInvariant[n'])
 }
 
+assert UnpublishCheck {
+	all n, n' : Nicebook, c : Content, u : User, p : PrivacyLevel | 
+		(userInvariant[u] and contentInvariant[c] and nicebookInvariant[n] 
+			and unpublish[n,n',c,u,p]) implies (nicebookInvariant[n'])
+}
+
+assert UnpublishCheck {
+	all n, n' : Nicebook, c : Content, u : User, p : PrivacyLevel | 
+		(userInvariant[u] and contentInvariant[c] and nicebookInvariant[n] 
+			and unpublish[n,n',c,u,p]) implies (nicebookInvariant[n'])
+}
+
 check PublishCheck for 3
