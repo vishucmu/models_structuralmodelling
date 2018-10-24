@@ -255,19 +255,28 @@ pred addTag[n,n': Nicebook, c: Content, u1, u2 : User] {
 						and publish[n,n',c',u2,c.privacy]
 }
 
-pred removeTag[n,n’ : Nicebook, c: Content. u1,u2 : User]{
-//a user can remove herself or the content publisher can remove tag from the published content 
-//u1 is the publisher of content, u2 is the user that was tagged
+// remover removing u1->u2 from c
+pred removeTag[n,n': Nicebook, c: Content, u1,u2,remover: User]{
+	// remover is legal
+	remover = u1 or remover = u2 or remover = c.uploadedBy
 
 	// c is not a comment
 	c not in Comment
 	// u1, u2 are friends
+	u2 in u1.friends
+	// u1, u2 are users of Nicebook
+	u1 in n.users and u2 in n.users
+	// c is content of n
+	c in n.contents
 
-
-	all w,w’ : u2.(n.walls) | c.uploadedBy = u1
-  	((u1->u2) in c.removeTags | (u2->u2) in c.removeTags) 
- 	 and w’.publication = w.publication - c 
- 	 and n’.walls = n.walls + u2 -> w’  //a user can be removed by the publisher of content or the user himself
+	n'.users = n.users
+	// add the tag to the c'
+	one c' : Content | (c'.tags = c.tags - (u1->u2)) and 
+		(c'.privacy = c.privacy) and (c'.uploadedBy = c.uploadedBy) and
+			(n'.contents = n.contents - c + c') and
+				(all x : n.users | (c not in n.walls[x] implies n'.walls[x] = n.walls[x]) 
+					and (c in n.walls[x] implies n'.walls[x] = n.walls[x] - c + c'))
+						and unpublish[n,n',c',u2]
 }
 
 
