@@ -41,8 +41,12 @@ one sig FriendsOfFriends extends PrivacyLevel {}
 one sig Everyone extends PrivacyLevel {}
 
 pred nicebookInvariant[n : Nicebook] {
+	// No user can have wall without being Nicebook's user
+	no u : User | u not in n.users and (some c : Content | c = n.walls[u])
 	// Every content in the wall should exist in the Nicebook
 	all u : User | all c : n.walls[u] | c in n.contents and c not in Comment
+	// All contents in the wall should follow the invariants of contents
+	all c : n.contents | contentInvariant[c]
 }
 
 pred userInvariant[u : User] {
@@ -60,7 +64,7 @@ pred contentInvariant[c : Content] {
 	// Notes' privacy level should be same as all its photos (assumption)
 	c in Note implies (all c' : c.contain | c.privacy = c'.privacy)
 	// A user can only tag his/her friends
-	all u : User | all u' : c.tags[u] | u in u'.friends
+	all u : User | all u' : c.tags[u] | u in u'.friends and u != u'
 }
 
 // Part of Tianli
@@ -84,7 +88,7 @@ pred contentOnWallCanView[n : Nicebook, u, u' : User, c : Content] {
 	u = u' or (
 		// If content is uploaded by u', then follow the privacy level of content
 		(u' = c.uploadedBy implies privacyCanView[u, u', c.privacy]) and
-		// If content is not uploaded by u', then follow the view privacy level of u'
+		// If content is not uploaded sy u', then follow the view privacy level of u'
 		(u' != c.uploadedBy implies privacyCanView[u, u', u'.privacyView])
 	)
 }
@@ -94,7 +98,7 @@ pred contentCanView[n : Nicebook, u : User, c : Content] {
 	u = c.uploadedBy or
 	(some u' : n.users | contentOnWallCanView[n, u, u', c] or
 		(c in Photo and (some c' : Note | c in c'.contain and contentOnWallCanView[n, u, u', c']))) or
-	(c in Comment and (some c' : c.content - Comment | c' in c.^attachedTo and contentCanView[n, u, c']))
+	(c in Comment and (some c' : c.contents - Comment | c' in c.^attachedTo and contentCanView[n, u, c']))
 }
 
 // Part by Tianli
@@ -108,14 +112,13 @@ pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment] {
 	// Comment com is not attached to any content
 	no com.attachedTo
 	// Content has been shown onto some user's wall
-	some u' : n.users | (c in n.walls[u'] can )
+	some u' : n.users | (c in n.walls[u'])
 	// In Nicebook n, user u can view content c
 	c in viewable[n, u]
 	// Comment com is uploaded by user u
 	u = com.uploadedBy
 	// Comment com has no tags / remove tags
 	no com.tags
-	no com.removeTags
 	// Comment com has privacy level p
 	com.privacy = p
 	// Postcondition
@@ -127,7 +130,6 @@ pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment] {
 	// Except for the content the comment attached to, every attribute remains
 	com'.uploadedBy = u
 	no com'.tags
-	no com'.removeTags
 	com'.privacy = com.privacy
 	com'.attachedTo = c
 	com'.privacy = p
