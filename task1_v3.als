@@ -295,6 +295,18 @@ pred removeTag[n, n' : Nicebook, c : Content, u1, u2, remover: User]{
 						and unpublish[n,n',c',u2]
 }
 
+assert UploadCheck {
+	all n, n' : Nicebook, c : Content, u : User, p : PrivacyLevel | 
+		(userInvariant[u] and contentInvariant[c] and nicebookInvariant[n] 
+			and upload[n,n',u,c,p]) implies (nicebookInvariant[n'])
+}
+
+assert RemoveCheck {
+	all n, n' : Nicebook, c : Content, u : User | 
+		(userInvariant[u] and contentInvariant[c] and nicebookInvariant[n] 
+			and remove[n,n',u,c]) implies (nicebookInvariant[n'])
+}
+
 assert PublishCheck {
 	all n, n' : Nicebook, c : Content, u : User, p : PrivacyLevel | 
 		(userInvariant[u] and contentInvariant[c] and nicebookInvariant[n] 
@@ -320,4 +332,12 @@ assert RemoveTagCheck {
 			and removeTag[n,n',c,u1,u2,u]) implies (nicebookInvariant[n'])
 }
 
-check PublishCheck for 3
+assert AddCommentCheck {
+	all n, n' : Nicebook, u: User, c : Content, com, com' : Comment | 
+		(userInvariant[u] and contentInvariant[c] and nicebookInvariant[n] and
+			contentInvariant[com] and contentInvariant[com'] and 
+				addComment[n, n', u, c , com, com'])
+					implies (nicebookInvariant[n'])
+}
+
+check AddCommentCheck for 10
