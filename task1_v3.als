@@ -340,6 +340,12 @@ assert AddCommentCheck {
 					implies (nicebookInvariant[n'])
 }
 
+
+assert NoPrivacyViolation {
+	all n: Nicebook, u : User | all c : viewable[n, u] |
+		privacyCanView[u, c.uploadedBy, c.privacy]
+}
+
 check UploadCheck for 10
 check RemoveCheck for 10
 check PublishCheck for 10
