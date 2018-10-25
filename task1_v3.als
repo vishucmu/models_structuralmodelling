@@ -211,7 +211,10 @@ pred remove[n, n' : Nicebook, u : User, c : Content]
 		(u' -> c in n.walls implies
 			u' -> c not in n'.walls) and
 		(u' -> c not in n.walls implies
-			u' -> c in n'.walls)
+			u' -> c in n'.walls) and
+		(all c' : n.contents |
+			c' != c implies 
+				(u' -> c' in n.walls iff u' -> c' in n'.walls))
 }
 
 // Returns all comments attached to content c
