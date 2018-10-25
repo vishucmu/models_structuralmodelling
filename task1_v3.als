@@ -286,7 +286,7 @@ pred removeTag[n, n' : Nicebook, c : Content, u1, u2, remover: User]{
 	c in n.contents
 
 	n'.users = n.users
-	// add the tag to the c'
+	// remove the tag to the c'
 	one c' : Content | (c'.tags = c.tags - (u1->u2)) and 
 		(c'.privacy = c.privacy) and (c'.uploadedBy = c.uploadedBy) and
 			(n'.contents = n.contents - c + c') and
