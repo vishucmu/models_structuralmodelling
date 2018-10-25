@@ -5,7 +5,8 @@
 sig Nicebook {
 	users : set User,
 	walls : users -> Content,
-	contents : set Content
+	contents : set Content,
+	tags : set Tag
 }
 
 sig User {
@@ -16,7 +17,6 @@ sig User {
 
 abstract sig Content {
 	uploadedBy : one User,
-	tags : User -> one User,
 	privacy : one PrivacyLevel
 }
 
@@ -28,6 +28,12 @@ sig Note extends Content {
 
 sig Comment extends Content {
 	attachedTo: lone Content
+}
+
+sig Tag {
+	tagger : one User,
+	taggee : one User,
+	content : one Content
 }
 
 abstract sig PrivacyLevel {}
@@ -44,11 +50,13 @@ pred nicebookInvariant[n : Nicebook] {
 	// No user can have wall without being Nicebook's user
 	no u : User | u not in n.users and (some c : Content | c = n.walls[u])
 	// Every content in the wall should exist in the Nicebook
-	all u : User | all c : n.walls[u] | c in n.contents and c not in Comment and c.uploadedBy in u + u.friends
+	all u : n.users | all c : n.walls[u] | c in n.contents and c not in Comment and c.uploadedBy in u + u.friends
 	// All contents of the Nicebook should follow the invariants of contents
 	all c : n.contents | contentInvariant[c]
 	// All users using the wall should follow the invariants of users
-	all u : User | userInvariant[u]
+	all u : n.users | userInvariant[u]
+	// All tags of the Nicebook should follow the invariants of tags
+	all t : n.tags | tagInvariant[n, t]
 }
 
 pred userInvariant[u : User] {
@@ -65,15 +73,20 @@ pred contentInvariant[c : Content] {
 	one p : PrivacyLevel | p = c.privacy
 	// Notes should follow the invariants
 	c in Note implies noteInvariant[c]
-	// A user can only tag his/her friends
-	all u : User | all u' : c.tags[u] | u in u'.friends and u != u'
 }
 
 // Comments have no tags, no privacy level and can not be attached to itself recursively
 pred commentInvariant[c : Comment] {
-	no c.tags 
 	no c.privacy 
 	c not in c.^attachedTo
+}
+
+pred tagInvariant[n : Nicebook, t : Tag] {
+	t.tagger != t.taggee
+	t.tagger in n.users
+	t.taggee in n.users
+	t.content in n.contents
+	t.content not in Comment
 }
 
 // Notes' privacy level should be same as all its photos (assumption)
@@ -83,7 +96,7 @@ pred noteInvariant[c : Note] {
 
 // Part of Tianli
 // Whether u has permission to content/wall of u' will a p privacy level
-pred privacyCanView[u, u' : User, p : PrivacyLevel] {
+pred privacyFollow[u, u' : User, p : PrivacyLevel] {
 	// Everyone
 	p = Everyone or 
 	// Friends of friends
@@ -98,12 +111,12 @@ pred privacyCanView[u, u' : User, p : PrivacyLevel] {
 pred contentOnWallCanView[n : Nicebook, u, u' : User, c : Content] {
 	// Content c should be on the wall of u'
 	c in n.walls[u']
-	// If u = u', all contentc can be viewed on his/her wall
+	// If u = u', all content can be viewed on his/her wall
 	u = u' or (
 		// If content is uploaded by u', then follow the privacy level of content
-		(u' = c.uploadedBy implies privacyCanView[u, u', c.privacy]) and
+		(u' = c.uploadedBy implies privacyFollow[u, u', c.privacy]) and
 		// If content is not uploaded sy u', then follow the view privacy level of u'
-		(u' != c.uploadedBy implies privacyCanView[u, u', u'.privacyView])
+		(u' != c.uploadedBy implies privacyFollow[u, u', u'.privacyView])
 	)
 }
 
@@ -130,23 +143,23 @@ pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment] {
 	// c is a content of Nicebook n
 	c in n.contents
 	// c can be viewd on someone's wall
-	contentCanView[n, u, c]
+	some c' : n.contents | some u' : n.walls.c' | c' in onWallContent[n, c] and 
+		contentOnWallCanView[n, u, u', c'] and privacyFollow[u, u', u'.privacyComment]
 	// Comment com is not attached to any content
 	no com.attachedTo
 	// Comment com is uploaded by user u
 	u = com.uploadedBy
-	// Comment com has no tags / privacy level
-	no com.tags
-	no com'.privacy
+	// Comment com has no privacy level
+	no com.privacy	
 	// Postcondition
 	// Users and walls remained
 	n'.users = n.users
 	n'.walls = n.walls
+	n'.tags = n.tags
 	// Add comment com' to new Nicebook's content list, remote origin com
 	n'.contents = n.contents - com + com'
 	// Except for the content the comment attached to, every attribute remains
 	com'.uploadedBy = u
-	no com'.tags
 	no com'.privacy
 	com'.attachedTo = c
 }
@@ -176,15 +189,17 @@ pred upload[n, n' : Nicebook, u : User, c : Content, p : PrivacyLevel]
 	// c is uploaded by u
 	c.uploadedBy = u
 	// No tags initially
-	no c.tags
+	c not in n.tags.content
 	// Privacy level of content is p
 	c.privacy = p
 	// Postcondition
 	// Frame conditions
 	n'.users = n.users
 	n'.walls = n.walls
+	n'.tags = n.tags
 	// c is in n’
-	n'.contents = n.contents + c + c.contain 	
+	c in Note implies n'.contents = n.contents + c + c.contain 
+	(c in Comment + Photo) implies n'.contents = n.contents + c
 	// No comment attached to c initially
 	all com : n.contents | 
 		com in Comment implies c not in com.attachedTo
@@ -204,17 +219,11 @@ pred remove[n, n' : Nicebook, u : User, c : Content]
 	// Postcondition
 	// Frame conditions
 	n'.users = n.users
-	// Remove c from n.contents
-	n'.contents = n.contents - c - allComments[c]
-	// Remove c from walls
-	all u' : n.users |
-		(u' -> c in n.walls implies
-			u' -> c not in n'.walls) and
-		(u' -> c not in n.walls implies
-			u' -> c in n'.walls) and
-		(all c' : n.contents |
-			c' != c implies 
-				(u' -> c' in n.walls iff u' -> c' in n'.walls))
+	n'.tags = n.tags
+	// Remove c from contents
+	n'.contents = n.contents - c - (^attachedTo).c
+	all u' : n.users | n'.walls[u'] = n.walls[u'] - c
+	n'.tags = n.tags - {t : n.tags | t.content = c}
 }
 
 // Returns all comments attached to content c
@@ -227,86 +236,82 @@ fun allComments[c : Content] : set Comment
 // Part by Weihsuan ends
 
 // part by yuanzong
-pred publish[n, n' : Nicebook, c :Content, u : User, p :PrivacyLevel] {
-	// if a content is owned  by the user u, and its a note or photo
+pred publish[n, n' : Nicebook, c : Content, u, u' : User, p : PrivacyLevel] {
+	// Precondition
+	u in n.users
+	u' in n.users
+	// if a content is owned by the user u, and its a note or photo
 	// and it is not already on the user's wall, publish it to the wall
-	c not in u.(n.walls)
-	(c in (uploadedBy.u)) and (c not in Comment)
-		implies n'.walls = n.walls + (u -> c) 
-	// if a content is owned  by the user's friend, and its a note or photo
-	// and it is not already on the friend's wall, publish it to the wall
-	(c in (uploadedBy.(u.friends))) and (c not in Comment) and (contentOnWallCanView[n, u, u.friends, c])
-		implies n'.walls = n.walls + (u -> c)
-	// if a content has not been uploaded yet, publish it and add it to the user’s account
-	(c not in Comment) and (c not in (uploadedBy.u)) and (c not in (uploadedBy.(u.friends)))
-		implies n'.walls = n.walls + (u -> c) and c.privacy = p and c.uploadedBy = u
+	c not in n.walls[u']
+	c not in Comment
+	// The publisher can view the content
+	contentCanView[n, u, c] or u = c.uploadedBy
+	// The content is uploaded by the wall's owner or his/her friend
+	c.uploadedBy in u' + u'.friends
+	// If c is newly uplaoded, c has no comment or tag
+	c not in n.contents implies (
+		(no com : n.contents | com in Comment and c in com.^attachedTo) and
+		c not in n.tags.content and
+		c.privacy = p
+	)
+	// Postcondition
+	n'.walls = n.walls + u'->c
+	n'.contents = n.contents + c
 	n'.users = n.users
-	n'.contents = n.contents
-	// No tags initially
-	no c.tags
-	// user's privacy level set to p
-	u.privacyView = p
+	n'.tags = n.tags
 }
 
 pred unpublish[n, n' : Nicebook, c : Content, u : User] {
 	// if c is in the user u's wall and , unpublish it
-	c in u.(n.walls)
+	c in n.walls[u]
 	c not in Comment
 	n'.walls = n.walls - (u -> c)
 	// users set won't change
 	n'.users = n.users
 	// contents in the Nicebook won't change
-	n'.contents = n.contents	
+	n'.contents = n.contents
+	n'.tags = n.tags	
 }
 
 //Part by Vishwas
-
-pred addTag[n, n' : Nicebook, c : Content, u1, u2 : User] {
+pred addTag[n, n' : Nicebook, t : Tag] {
 	// c is not a comment
-	c not in Comment
+	t.content not in Comment
 	// u1, u2 are friends
-	u2 in u1.friends
+	t.taggee in t.tagger.friends
 	// u1, u2 are users of Nicebook
-	u1 in n.users and u2 in n.users
+	t.taggee in n.users
+	t.tagger in n.users
 	// c is content of n
-	c in n.contents
+	t.content in n.contents
+	t.content.uploadedBy in t.taggee + t.taggee.friends
+	contentCanView[n, t.tagger, t.content]
 
-	// u1 has the permission to view the content
-	some u : n.users | contentOnWallCanView[n,u1,u,c] or 
-		(some c' : Note | c in c'.contain and contentOnWallCanView[n,u1,u,c'])
+	no t' : Tag | t = t'
 
 	n'.users = n.users
-	// add the tag to the c'
-	one c' : Content | (c'.tags = c.tags + (u1->u2)) and 
-		(c'.privacy = c.privacy) and (c'.uploadedBy = c.uploadedBy) and
-			(n'.contents = n.contents - c + c') and
-				(all x : n.users | (c not in n.walls[x] implies n'.walls[x] = n.walls[x]) 
-					and (c in n.walls[x] implies n'.walls[x] = n.walls[x] - c + c'))
-						and publish[n,n',c',u2,c.privacy]
+	n'.contents = n.contents
+	n'.walls = n.walls + t.taggee->t.content
+	n'.tags = n.tags + t
 }
 
 // remover removing u1->u2 from c
-pred removeTag[n, n' : Nicebook, c : Content, u1, u2, remover: User]{
+pred removeTag[n, n' : Nicebook, t : Tag, u : User]{
 	// remover is legal
-	remover = u1 or remover = u2 or remover = c.uploadedBy
+	u in t.tagger + t.taggee + t.content.uploadedBy
 
+	t in n.tags
 	// c is not a comment
-	c not in Comment
-	// u1, u2 are friends
-	u2 in u1.friends
+	t.content not in Comment
 	// u1, u2 are users of Nicebook
-	u1 in n.users and u2 in n.users
+	t.tagger in n.users 
+	t.taggee in n.users
 	// c is content of n
-	c in n.contents
+	t.content in n.contents
 
 	n'.users = n.users
-	// remove the tag to the c'
-	one c' : Content | (c'.tags = c.tags - (u1->u2)) and 
-		(c'.privacy = c.privacy) and (c'.uploadedBy = c.uploadedBy) and
-			(n'.contents = n.contents - c + c') and
-				(all x : n.users | (c not in n.walls[x] implies n'.walls[x] = n.walls[x]) 
-					and (c in n.walls[x] implies n'.walls[x] = n.walls[x] - c + c'))
-						and unpublish[n,n',c',u2]
+	n'.walls = n.walls
+	n'.tags = n.tags
 }
 
 assert UploadCheck {
@@ -322,9 +327,9 @@ assert RemoveCheck {
 }
 
 assert PublishCheck {
-	all n, n' : Nicebook, c : Content, u : User, p : PrivacyLevel | 
-		(userInvariant[u] and contentInvariant[c] and nicebookInvariant[n] 
-			and publish[n,n',c,u,p]) implies (nicebookInvariant[n'])
+	all n, n' : Nicebook, c : Content, u1, u2 : User, p : PrivacyLevel | 
+		(userInvariant[u1] and userInvariant[u2] and contentInvariant[c] and nicebookInvariant[n] 
+			and publish[n,n',c,u1,u2,p]) implies (nicebookInvariant[n'])
 }
 
 assert UnpublishCheck {
@@ -334,16 +339,14 @@ assert UnpublishCheck {
 }
 
 assert AddTagCheck {
-	all n, n' : Nicebook, c : Content, u1, u2 : User | 
-		(userInvariant[u1] and userInvariant[u2] and contentInvariant[c] 
-			and nicebookInvariant[n] and addTag[n,n',c,u1,u2]) implies (nicebookInvariant[n'])
+	all n, n' : Nicebook, t : Tag | 
+		(nicebookInvariant[n] and tagInvariant[n, t] and addTag[n,n',t]) implies (nicebookInvariant[n'])
 }
 
 assert RemoveTagCheck {
-	all n, n' : Nicebook, c : Content, u1, u2, u : User | 
-		(userInvariant[u] and userInvariant[u1] and userInvariant[u2] and
-			contentInvariant[c] and nicebookInvariant[n]
-			and removeTag[n,n',c,u1,u2,u]) implies (nicebookInvariant[n'])
+	all n, n' : Nicebook, t : Tag, u : User | 
+		(userInvariant[u] and nicebookInvariant[n] and addTag[n,n',t]
+			and removeTag[n,n', t,u]) implies (nicebookInvariant[n'])
 }
 
 assert AddCommentCheck {
@@ -353,7 +356,6 @@ assert AddCommentCheck {
 				addComment[n, n', u, c , com, com'])
 					implies (nicebookInvariant[n'])
 }
-
 
 assert NoPrivacyViolation {
 	all n: Nicebook, u : User | all c : viewable[n, u] |
