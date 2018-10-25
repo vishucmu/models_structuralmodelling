@@ -168,7 +168,7 @@ fun viewable[n : Nicebook, u : User] : set Content {
 // c is before upload, c' is after upload
 pred upload[n, n' : Nicebook, u : User, c : Content, p : PrivacyLevel]
 {
-	// Precondition
+	// Percondition
 	// u is a user of Nicebook n
 	u in n.users
 	// c is not in n
@@ -184,7 +184,7 @@ pred upload[n, n' : Nicebook, u : User, c : Content, p : PrivacyLevel]
 	n'.users = n.users
 	n'.walls = n.walls
 	// c is in n’
-	n'.contents = n.contents + c
+	n'.contents = n.contents + c + c.contain 	
 	// No comment attached to c initially
 	all com : n.contents | 
 		com in Comment implies c not in com.attachedTo
