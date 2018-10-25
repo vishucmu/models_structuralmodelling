@@ -216,6 +216,8 @@ pred remove[n, n' : Nicebook, u : User, c : Content]
 	// c is in n
 	c in n.contents
 	c not in Comment
+	// If c is a photo and is contained by a note, it cannot be removed independly
+	not (c in Photo and (some c' : n.contents | c in c'.contain))
 	// Postcondition
 	// Frame conditions
 	n'.users = n.users
@@ -223,7 +225,7 @@ pred remove[n, n' : Nicebook, u : User, c : Content]
 	// Remove c from contents
 	n'.contents = n.contents - c - (^attachedTo).c
 	all u' : n.users | n'.walls[u'] = n.walls[u'] - c
-	n'.tags = n.tags - {t : n.tags | t.content = c}
+	n'.tags = n.tags - content.c
 }
 
 // Returns all comments attached to content c
