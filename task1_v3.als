@@ -168,7 +168,7 @@ fun viewable[n : Nicebook, u : User] : set Content {
 // c is before upload, c' is after upload
 pred upload[n, n' : Nicebook, u : User, c : Content, p : PrivacyLevel]
 {
-	// Percondition
+	// Precondition
 	// u is a user of Nicebook n
 	u in n.users
 	// c is not in n
@@ -184,10 +184,10 @@ pred upload[n, n' : Nicebook, u : User, c : Content, p : PrivacyLevel]
 	n'.users = n.users
 	n'.walls = n.walls
 	// c is in n’
-	c in Note implies n'.contents = n.contents + c + c.contain 
-	(c in Comment or c in Note) implies n'.contents = n.contents + c
+	n'.contents = n.contents + c
 	// No comment attached to c initially
-	all com : n.contents | com in Comment implies c not in com.attachedTo
+	all com : n.contents | 
+		com in Comment implies c not in com.attachedTo
 }
 
 // User u removes content c
@@ -204,13 +204,24 @@ pred remove[n, n' : Nicebook, u : User, c : Content]
 	// Postcondition
 	// Frame conditions
 	n'.users = n.users
-	n'.walls = n.walls
-	// Remove c from contents
-	n'.contents = n.contents - c
-	all u' : User | c in u'.(n.walls) implies n'.walls = n.walls - (u' -> c)
-	all c' : Comment | c' in (attachedTo.c) implies n'.contents = n.contents
+	// Remove c from n.contents
+	n'.contents = n.contents - c - allComments[c]
+	// Remove c from walls
+	all u' : n.users |
+		(u' -> c in n.walls implies
+			u' -> c not in n'.walls) and
+		(u' -> c not in n.walls implies
+			u' -> c in n'.walls)
 }
 
+// Returns all comments attached to content c
+fun allComments[c : Content] : set Comment
+{
+	{com : Comment |
+		c in com.^attachedTo
+	}
+}
+// Part by Weihsuan ends
 
 // part by yuanzong
 pred publish[n, n' : Nicebook, c :Content, u : User, p :PrivacyLevel] {
