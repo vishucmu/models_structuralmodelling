@@ -114,9 +114,9 @@ pred contentOnWallCanView[n : Nicebook, u, u' : User, c : Content] {
 	// If u = u', all content can be viewed on his/her wall
 	u = u' or (
 		// If content is uploaded by u', then follow the privacy level of content
-		(u' = c.uploadedBy implies privacyFollow[u, u', c.privacy]) and
+		u' = c.uploadedBy implies privacyFollow[u, u', c.privacy]
 		// If content is not uploaded sy u', then follow the view privacy level of u'
-		(u' != c.uploadedBy implies privacyFollow[u, u', u'.privacyView])
+			else privacyFollow[u, u', u'.privacyView]
 	)
 }
 
@@ -124,7 +124,9 @@ pred contentOnWallCanView[n : Nicebook, u, u' : User, c : Content] {
 fun onWallContent[n : Nicebook, c : Content] : set Content {
 	{c' : n.contents | some u : n.users | c' in n.walls[u] and (
 		c' = c or
-		(c in Comment and c' in c.^attachedTo) or
+		(c in Comment and (c' in c.^attachedTo or 
+			(c' in Note and (some c'' : n.contents | 
+				c'' in Photo and c'' in c'.contain and c'' in c.^attachedTo)))) or
 		(c in Photo and c' in Note and c in c'.contain)
 	)}
 }
@@ -199,7 +201,7 @@ pred upload[n, n' : Nicebook, u : User, c : Content, p : PrivacyLevel]
 	n'.tags = n.tags
 	// c is in n’
 	c in Note implies n'.contents = n.contents + c + c.contain 
-	(c in Comment + Photo) implies n'.contents = n.contents + c
+		else n'.contents = n.contents + c
 	// No comment attached to c initially
 	all com : n.contents | 
 		com in Comment implies c not in com.attachedTo
@@ -228,13 +230,6 @@ pred remove[n, n' : Nicebook, u : User, c : Content]
 	n'.tags = n.tags - content.c
 }
 
-// Returns all comments attached to content c
-fun allComments[c : Content] : set Comment
-{
-	{com : Comment |
-		c in com.^attachedTo
-	}
-}
 // Part by Weihsuan ends
 
 // part by yuanzong
