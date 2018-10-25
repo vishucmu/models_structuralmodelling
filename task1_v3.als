@@ -201,7 +201,8 @@ pred upload[n, n' : Nicebook, u : User, c : Content, p : PrivacyLevel]
 	c in Note implies n'.contents = n.contents + c + c.contain 
 	(c in Comment + Photo) implies n'.contents = n.contents + c
 	// No comment attached to c initially
-	all com : n.contents | com in Comment implies c not in com.attachedTo
+	all com : n.contents | 
+		com in Comment implies c not in com.attachedTo
 }
 
 // User u removes content c
@@ -225,6 +226,14 @@ pred remove[n, n' : Nicebook, u : User, c : Content]
 	n'.tags = n.tags - {t : n.tags | t.content = c}
 }
 
+// Returns all comments attached to content c
+fun allComments[c : Content] : set Comment
+{
+	{com : Comment |
+		c in com.^attachedTo
+	}
+}
+// Part by Weihsuan ends
 
 // part by yuanzong
 pred publish[n, n' : Nicebook, c : Content, u, u' : User, p : PrivacyLevel] {
@@ -348,11 +357,16 @@ assert AddCommentCheck {
 					implies (nicebookInvariant[n'])
 }
 
-check UploadCheck for 15
-check RemoveCheck for 15
-check PublishCheck for 15
-check UnpublishCheck for 15
-check AddTagCheck for 15
-check RemoveTagCheck for 15
-check AddCommentCheck for 15
+assert NoPrivacyViolation {
+	all n: Nicebook, u : User | all c : viewable[n, u] |
+		privacyCanView[u, c.uploadedBy, c.privacy]
+}
+
+check UploadCheck for 10
+check RemoveCheck for 10
+check PublishCheck for 10
+check UnpublishCheck for 10
+check AddTagCheck for 10
+check RemoveTagCheck for 10
+check AddCommentCheck for 10
 
