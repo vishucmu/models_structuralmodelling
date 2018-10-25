@@ -189,17 +189,15 @@ pred upload[n, n' : Nicebook, u : User, c : Content, p : PrivacyLevel]
 	// c is uploaded by u
 	c.uploadedBy = u
 	// No tags initially
-	c not in n.tags.content
+	no c.tags
 	// Privacy level of content is p
 	c.privacy = p
 	// Postcondition
 	// Frame conditions
 	n'.users = n.users
 	n'.walls = n.walls
-	n'.tags = n.tags
-	// c is in n’
-	c in Note implies n'.contents = n.contents + c + c.contain 
-	(c in Comment + Photo) implies n'.contents = n.contents + c
+	// c and whatever it contains must be in n’
+	n'.contents = n.contents + c + c.contain 	
 	// No comment attached to c initially
 	all com : n.contents | 
 		com in Comment implies c not in com.attachedTo
@@ -219,11 +217,17 @@ pred remove[n, n' : Nicebook, u : User, c : Content]
 	// Postcondition
 	// Frame conditions
 	n'.users = n.users
-	n'.tags = n.tags
-	// Remove c from contents
-	n'.contents = n.contents - c - (^attachedTo).c
-	all u' : n.users | n'.walls[u'] = n.walls[u'] - c
-	n'.tags = n.tags - {t : n.tags | t.content = c}
+	// Remove c and all comments attached to c from n.contents
+	n'.contents = n.contents - c - allComments[c]
+	// Remove c from walls
+	all u' : n.users |
+		(u' -> c not in n'.walls) and
+		// For other contents, they shall remain the same 
+		(all c' : Content |
+			c' != c implies 
+				((u' -> c' in n.walls iff u' -> c' in n'.walls) and
+				  (u' -> c' not in n.walls iff u' -> c' not in n'.walls))
+		)
 }
 
 // Returns all comments attached to content c
