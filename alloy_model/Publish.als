@@ -1,5 +1,6 @@
 /*
- * 	17-651 | Group Project | Team 9
+ * 	17-651 | Group Project | Group 9
+ *      publish/unpublish content
  */
 
 open Signature
@@ -57,8 +58,9 @@ pred unpublish[n, n' : Nicebook, c : Content, u : User] {
 // Check for publish operation
 assert PublishCheck {
 	all n, n' : Nicebook, c : Content, u, u' : User, p : PrivacyLevel | 
-		(userInvariant[n, u] and userInvariant[n, u'] and contentInvariant[n, c] and nicebookInvariant[n] 
-			and publish[n, n', c, u, u', p]) implies nicebookInvariant[n']
+		(userInvariant[n, u] and userInvariant[n, u'] and contentInvariant[n, c] and 
+			nicebookInvariant[n] and publish[n, n', c, u, u', p]) implies 
+				nicebookInvariant[n']
 }
 
 // Check for unpublish operation
@@ -71,13 +73,14 @@ assert UnpublishCheck {
 run runPublish {
 	all n : Nicebook | nicebookInvariant[n]
 	some n, n' : Nicebook, c : Content, u, u' : User, p : PrivacyLevel | 
-		userInvariant[n, u] and userInvariant[n, u'] and contentInvariant[n, c] and nicebookInvariant[n] 
-			and publish[n, n', c, u, u', p] and nicebookInvariant[n']
+		userInvariant[n, u] and userInvariant[n, u'] and 
+			contentInvariant[n, c] and nicebookInvariant[n] and 
+			publish[n, n', c, u, u', p] and nicebookInvariant[n']
 	some n, n' : Nicebook, c : Content, u : User | 
 		userInvariant[n, u] and contentInvariant[n, c] and nicebookInvariant[n] 
 			and unpublish[n, n', c, u] and nicebookInvariant[n']
-} for 10
+} for 12 but exactly 3 Nicebook
 
-check PublishCheck for 10
-check UnpublishCheck for 10
+check PublishCheck for 12 but exactly 2 Nicebook
+check UnpublishCheck for 12 but exactly 2 Nicebook
 

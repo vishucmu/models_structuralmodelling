@@ -1,5 +1,6 @@
 /*
- * 	17-651 | Group Project | Team 9
+ * 	17-651 | Group Project | Group 9
+ *      All invariants of Nicebook
  */
 
 open Signature
@@ -30,7 +31,8 @@ pred userInvariant[n : Nicebook, u : User] {
 }
 
 pred contentInvariant[n : Nicebook, c : Content] {
-	// comments have no privacy level and can not be attached to itself recursively
+	// comments have no privacy level and
+	// can not be attached to itself recursively
 	c in Comment implies 
 		(c.privacy = Everyone and 
 		c not in c.^attachedTo)
@@ -56,7 +58,8 @@ pred tagInvariant[n : Nicebook, t : Tag] {
 	// both tagger and taggee should follow the user invariant
 	userInvariant[n, t.tagger]
 	userInvariant[n, t.taggee]
-	// the content associated with the tag must be with the Nicebook and follow the content invariant
+	// the content associated with the tag must be with the Nicebook 
+	//and follow the content invariant
 	contentInvariant[n, t.content]
 	t.content in n.contents
 	// a user can not tag a comment

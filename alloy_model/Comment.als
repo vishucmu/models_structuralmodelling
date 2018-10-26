@@ -1,5 +1,6 @@
 /*
- * 	17-651 | Group Project | Team 9
+ * 	17-651 | Group Project | Group 9
+ *      Add comment
  */
 
 open Signature
@@ -21,8 +22,10 @@ pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment] {
 	// new comment is not an existing one
 	com' not in n.contents
 	// c can be viewd on someone's wall
-	some c' : n.contents | some u' : n.walls.c' | c' in onWallContent[n, c] and 
-		contentOnWallCanView[n, u, u', c'] and privacyFollow[u, u', u'.privacyComment]
+	some c' : n.contents | u = c.uploadedBy or 
+		(some u' : n.walls.c' | c' in onWallContent[n, c] and 
+		contentOnWallCanView[n, u, u', c'] and
+		privacyFollow[u, u', u'.privacyComment])
 	// comment com is not attached to any content
 	no com.attachedTo
 	// comment com is uploaded by user u
@@ -47,16 +50,19 @@ pred addComment[n, n' : Nicebook, u: User, c : Content, com, com' : Comment] {
 
 // Check for addcomment operation
 assert AddCommentCheck {
-	all n, n' : Nicebook, u: User, c : Content, com, com' : Comment | (addComment[n, n', u, c , com, com'] and
-		userInvariant[n, u] and contentInvariant[n, c] and nicebookInvariant[n] and 
-			contentInvariant[n, com] and contentInvariant[n, com']) implies nicebookInvariant[n']
+	all n, n' : Nicebook, u: User, c : Content, com, com' : Comment | 
+		(addComment[n, n', u, c , com, com'] and userInvariant[n, u] and 
+		contentInvariant[n, c] and nicebookInvariant[n] and 
+		contentInvariant[n, com] and contentInvariant[n, com']) implies 
+			nicebookInvariant[n']
 }
 
 run runComment {
 	all n : Nicebook | nicebookInvariant[n]
-	some n, n' : Nicebook, u: User, c : Content, com, com' : Comment | addComment[n, n', u, c , com, com'] and
-		userInvariant[n, u] and contentInvariant[n, c] and nicebookInvariant[n] and nicebookInvariant[n'] and
+	some n, n' : Nicebook, u: User, c : Content, com, com' : Comment | 
+		addComment[n, n', u, c , com, com'] and userInvariant[n, u] and 
+		contentInvariant[n, c] and nicebookInvariant[n] and nicebookInvariant[n'] and
 			contentInvariant[n, com] and contentInvariant[n, com']
-} for 10
+} for 12 but exactly 2 Nicebook
 
-check AddCommentCheck for 10
+check AddCommentCheck for 12 but exactly 2 Nicebook

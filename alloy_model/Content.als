@@ -1,5 +1,6 @@
 /*
- * 	17-651 | Group Project | Team 9
+ * 	17-651 | Group Project | Group 9
+ *      upload/remove content
  */
 
 open Signature
@@ -21,12 +22,14 @@ pred upload[n, n' : Nicebook, u : User, c : Content, p : PrivacyLevel]
 	c not in n.tags.content
 	// privacy level of content is p
 	c.privacy = p
+	// If c is a comment, it cannot be attached to any content
+	c in Comment implies no c.attachedTo
 	// Postcondition
 	// users, walls, and tags remain unchanged
 	n'.users = n.users
 	n'.walls = n.walls
 	n'.tags = n.tags
-	// the content c is added in n’
+	// the content c is added in n'
 	// if c is a note, the photos it contains will be uploaded together
 	c in Note implies (n'.contents = n.contents + c + c.contain and 
 		(all c' : c.contain | c.privacy = c'.privacy and c'.uploadedBy = u))
@@ -54,7 +57,6 @@ pred remove[n, n' : Nicebook, u : User, c : Content]
 	// Postcondition
 	// users and tags remain unchanged
 	n'.users = n.users
-	n'.tags = n.tags
 	// remove content c from contents
 	n'.contents = n.contents - c - (^attachedTo).c
 	all u' : n.users | n'.walls[u'] = n.walls[u'] - c
@@ -77,11 +79,13 @@ assert RemoveCheck {
 
 run runContent {
 	all n : Nicebook | nicebookInvariant[n]
-	some n, n' : Nicebook, c : Content, u : User, p : PrivacyLevel | upload[n, n', u, c, p] and
-		userInvariant[n, u] and contentInvariant[n, c] and nicebookInvariant[n] and nicebookInvariant[n']
-	some n, n' : Nicebook, c : Content, u : User | remove[n, n', u, c] and
-		userInvariant[n, u] and contentInvariant[n, c] and nicebookInvariant[n] and nicebookInvariant[n']
-} for 10
+	some n, n' : Nicebook, c : Content, u : User, p : PrivacyLevel | 
+		upload[n, n', u, c, p] and userInvariant[n, u] and contentInvariant[n, c] and 
+		nicebookInvariant[n] and nicebookInvariant[n']
+	some n, n' : Nicebook, c : Content, u : User | remove[n, n', u, c] and 
+		userInvariant[n, u] and contentInvariant[n, c] and 
+		nicebookInvariant[n] and nicebookInvariant[n']
+} for 12 but exactly 3 Nicebook
 
-check UploadCheck for 10
-check RemoveCheck for 10
+check UploadCheck for 12 but exactly 2 Nicebook
+check RemoveCheck for 12 but exactly 2 Nicebook

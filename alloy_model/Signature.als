@@ -1,5 +1,6 @@
 /*
- * 	17-651 | Group Project | Team 9
+ * 	17-651 | Group Project | Group 9
+ *      All signatures of Nicebook
  */
 
 // The signature of our social network 

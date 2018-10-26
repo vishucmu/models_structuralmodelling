@@ -1,0 +1,7 @@
+17-651 Project 1: Structural Modeling - Group 9
+Author: Tianli Wu, Vishwas Singh, Wei-Hsuan Wang, Yanhao Li, Yuanzong Zhang
+Main model file: Main.als
+Other model files:
+Comment.als     Invariant.als   Privacy.als     Publish.als
+Content.als     Privacy_new.als Signature.als   Tag.als
+*Privacy_new.als is not used in the model, it is just for justification of Task 2 Question 3.

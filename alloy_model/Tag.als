@@ -1,5 +1,6 @@
 /*
- * 	17-651 | Group Project | Team 9
+ * 	17-651 | Group Project | Group 9
+ *      add/remove tag
  */
 
 open Signature
@@ -27,7 +28,7 @@ pred addTag[n, n' : Nicebook, t : Tag] {
 	// tagger must able to view the content 
 	contentCanView[n, t.tagger, t.content]
 	// no duplicate tags
-	no t' : n.tags | t != t'
+	no t' : n.tags | t = t'
 	
 	// users and contents remain unchanged
 	n'.users = n.users
@@ -66,24 +67,27 @@ pred removeTag[n, n' : Nicebook, t : Tag, u : User]{
 // Check for addtag operation
 assert AddTagCheck {
 	all n, n' : Nicebook, t : Tag | 
-		(nicebookInvariant[n] and tagInvariant[n, t] and addTag[n, n', t]) implies nicebookInvariant[n']
+		(nicebookInvariant[n] and tagInvariant[n, t] and addTag[n, n', t]) implies 
+			nicebookInvariant[n']
 } 
 
 // Check for removetag operation
 assert RemoveTagCheck {
 	all n, n' : Nicebook, t : Tag, u : User | 
-		(userInvariant[n, u] and nicebookInvariant[n] and tagInvariant[n, t] and removeTag[n,n', t,u]) implies nicebookInvariant[n']
+		(userInvariant[n, u] and nicebookInvariant[n] and tagInvariant[n, t] and 
+			removeTag[n,n', t,u]) implies nicebookInvariant[n']
 }
 
 run runTag {
 	all n : Nicebook | nicebookInvariant[n]
 	some n, n' : Nicebook, t : Tag | 
-		nicebookInvariant[n] and tagInvariant[n, t] and addTag[n, n', t] and nicebookInvariant[n']
+		nicebookInvariant[n] and tagInvariant[n, t] and 
+			addTag[n, n', t] and nicebookInvariant[n']
 	some n, n' : Nicebook, t : Tag, u : User | 
 		userInvariant[n, u] and nicebookInvariant[n] and tagInvariant[n, t]
 			and removeTag[n,n', t,u] and nicebookInvariant[n']
-} for 10
+} for 12 but exactly 3 Nicebook
 
-check AddTagCheck for 10
-check RemoveTagCheck for 10
+check AddTagCheck for 12 but exactly 2 Nicebook
+check RemoveTagCheck for 12 but exactly 2 Nicebook
 
