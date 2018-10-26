@@ -18,6 +18,8 @@ pred addTag[n, n' : Nicebook, t : Tag] {
 	// u1, u2 are users of Nicebook
 	t.taggee in n.users
 	t.tagger in n.users
+	// a user can not tag him/herself
+	t.tagger != t.taggee
 	// the content c is in Nicebook n
 	t.content in n.contents
 	// the content associated must be uploaded by taggee or its friend
@@ -44,6 +46,8 @@ pred removeTag[n, n' : Nicebook, t : Tag, u : User]{
 	u in t.tagger + t.taggee + t.content.uploadedBy
 	// the tag is in Nicebook n
 	t in n.tags
+	// a user can not tag him/herself
+	t.tagger != t.taggee
 	// a comment can not be tagged
 	t.content not in Comment
 	// u1, u2 are users of Nicebook
@@ -78,7 +82,7 @@ run runTag {
 	some n, n' : Nicebook, t : Tag, u : User | 
 		userInvariant[n, u] and nicebookInvariant[n] and tagInvariant[n, t]
 			and removeTag[n,n', t,u] and nicebookInvariant[n']
-}
+} for 10
 
 check AddTagCheck for 10
 check RemoveTagCheck for 10
