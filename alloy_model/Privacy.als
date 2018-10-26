@@ -63,8 +63,8 @@ fun viewable[n : Nicebook, u : User] : set Content {
 
 // the assertion NoPrivacyViolation
 assert NoPrivacyViolation {
-	all n: Nicebook, u : User | all c : viewable[n, u] |
-		privacyFollow[u, c.uploadedBy, c.privacy]
+	all n: Nicebook | all u : n.users | all c : viewable[n, u] |
+		nicebookInvariant[n] implies privacyFollow[u, c.uploadedBy, c.privacy]
 }
 check NoPrivacyViolation 
 
